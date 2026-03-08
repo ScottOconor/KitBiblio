@@ -1,0 +1,105 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
+    const courses = await prisma.course.findMany({
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        isPublished: true,
+        isFree: true,
+        level: true,
+        duration: true,
+        lessonsCount: true,
+        createdAt: true,
+        category: {
+          select: { id: true, name: true }
+        },
+        instructor: {
+          select: { id: true, firstName: true, lastName: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    return NextResponse.json(courses)
+  } catch (error) {
+    console.error('Error fetching admin courses:', error)
+    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || !['ADMIN', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const {
+      title,
+      description,
+      shortDesc,
+      price,
+      originalPrice,
+      categoryId,
+      language,
+      level,
+      duration,
+      lessonsCount,
+      hasCertificate,
+      paymentLink,
+      isPublished,
+      isFree,
+      thumbnail
+    } = body
+
+    const slug = generateSlug(title)
+
+    const course = await prisma.course.create({
+      data: {
+        title,
+        slug,
+        description,
+        shortDesc: shortDesc || null,
+        price: parseFloat(price),
+        originalPrice: originalPrice ? parseFloat(originalPrice) : null,
+        categoryId,
+        language: language || 'fr',
+        level: level ? level.toUpperCase() : 'BEGINNER',
+        duration: duration ? parseInt(duration) : 0,
+        lessonsCount: lessonsCount ? parseInt(lessonsCount) : 0,
+        hasCertificate: hasCertificate ?? false,
+        paymentLink: paymentLink || null,
+        isPublished: isPublished ?? false,
+        isFree: isFree ?? false,
+        thumbnail: thumbnail || null,
+        instructorId: session.user.id
+      }
+    })
+
+    return NextResponse.json(course, { status: 201 })
+  } catch (error) {
+    console.error('Error creating course:', error)
+    return NextResponse.json({ error: 'Erreur lors de la création du cours' }, { status: 500 })
+  }
+}

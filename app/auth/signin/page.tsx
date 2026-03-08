@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -35,7 +35,13 @@ export default function SignInPage() {
       if (result?.error) {
         setError('Email ou mot de passe incorrect')
       } else {
-        router.push('/dashboard')
+        const session = await getSession()
+        const role = session?.user?.role
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+          router.push('/admin')
+        } else {
+          router.push('/dashboard')
+        }
         router.refresh()
       }
     } catch (error) {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { ShoppingCart, Menu, X, BookOpen, GraduationCap, Search, User, LogIn, LogOut, Settings } from "lucide-react";
+import { ShoppingCart, Menu, X, BookOpen, GraduationCap, Search, User, LogIn, LogOut, Settings, Shield } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -130,6 +130,17 @@ export default function Header() {
                     </div>
                   </div>
                   <DropdownMenuSeparator />
+                  {['ADMIN', 'SUPER_ADMIN'].includes(session.user.role) && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="w-full cursor-pointer">
+                          <Shield className="mr-2 h-4 w-4 text-blue-600" />
+                          <span className="font-semibold text-blue-600">Espace Admin</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="w-full cursor-pointer">
                       <User className="mr-2 h-4 w-4" />
