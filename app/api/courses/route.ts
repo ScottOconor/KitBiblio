@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
 
     const where: any = {
       isPublished: true,
-      isActive: true
     }
 
     if (category) {

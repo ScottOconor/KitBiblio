@@ -77,6 +77,7 @@ model Book {
   isbn          String?    @unique
   publisher     String?
   paymentLink   String?
+  contentUrl    String?
   publishDate   DateTime?
   rating        Float      @default(0)
   reviewsCount  Int        @default(0)
@@ -137,8 +138,29 @@ model Course {
   reviews     Review[]
   bookmarks   Bookmark[]
   progress    Progress[]
+  lessons     Lesson[]
 
   @@map("courses")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  content     String?
+  videoUrl    String?
+  fileUrl     String?
+  duration    Int      @default(0)
+  order       Int      @default(0)
+  isFree      Boolean  @default(false)
+  isPublished Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("lessons")
 }
 
 enum CourseLevel {

@@ -282,7 +282,21 @@ function createAdapter() {
 }
 
 // ── Singleton PrismaClient ──────────────────────────────────────────
-export const prisma: PrismaClient =
-  g.prisma ?? new PrismaClient({ adapter: createAdapter() as any })
+let _prisma: PrismaClient | undefined
 
-if (process.env.NODE_ENV !== 'production') g.prisma = prisma
+export function getPrisma(): PrismaClient {
+  if (!_prisma) {
+    _prisma = new PrismaClient({ adapter: createAdapter() as any })
+  }
+  return _prisma
+}
+
+export const prisma: PrismaClient = getPrisma()
+
+if (process.env.NODE_ENV !== 'production') {
+  // Store in global for development hot reloading
+  const g = globalThis as any
+  if (!g._prisma) {
+    g._prisma = _prisma
+  }
+}

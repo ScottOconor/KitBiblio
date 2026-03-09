@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <body suppressHydrationWarning className="antialiased" style={{ backgroundColor: "#faf8f3", color: "#1a1a1a", fontFamily: "system-ui, -apple-system, sans-serif" }}>
         <Providers>
           {children}

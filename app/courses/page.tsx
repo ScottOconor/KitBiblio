@@ -1,303 +1,200 @@
 "use client"
 
+import { useEffect, useState, useMemo } from "react"
 import { motion } from "framer-motion"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { CourseGrid } from "@/components/course-grid"
+import { DbCourseCard, DbCourse } from "@/components/db-course-card"
 import { ParticlesBackground } from "@/components/particles-background"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, Star, Clock, Users } from "lucide-react"
-import { useState } from "react"
+import { Search, Star, GraduationCap, Users } from "lucide-react"
 
-const coursesData = [
-  {
-    id: "1",
-    title: "Développement Web Complet - De Zéro à Expert",
-    instructor: "Marie Dubois",
-    description: "Apprenez HTML, CSS, JavaScript, React, Node.js et bien plus avec ce cours complet de développement web.",
-    price: 89.99,
-    originalPrice: 199.99,
-    image: "/api/placeholder/400/300",
-    duration: "42 heures",
-    students: 15420,
-    rating: 4.8,
-    level: "Débutant",
-    category: "Développement",
-    lessons: 156
-  },
-  {
-    id: "2",
-    title: "Machine Learning & Intelligence Artificielle",
-    instructor: "Dr. Jean Martin",
-    description: "Maîtrisez les algorithmes de machine learning, deep learning et l'intelligence artificielle avec Python.",
-    price: 129.99,
-    originalPrice: 299.99,
-    image: "/api/placeholder/400/300",
-    duration: "58 heures",
-    students: 12350,
-    rating: 4.9,
-    level: "Intermédiaire",
-    category: "IA & Data Science",
-    lessons: 234
-  },
-  {
-    id: "3",
-    title: "Design UI/UX Moderne avec Figma",
-    instructor: "Sophie Laurent",
-    description: "Créez des interfaces magnifiques et fonctionnelles. Apprenez les principes du design et maîtrisez Figma.",
-    price: 69.99,
-    originalPrice: 149.99,
-    image: "/api/placeholder/400/300",
-    duration: "28 heures",
-    students: 8920,
-    rating: 4.7,
-    level: "Débutant",
-    category: "Design",
-    lessons: 98
-  },
-  {
-    id: "4",
-    title: "Marketing Digital Stratégie Avancée",
-    instructor: "Pierre Bernard",
-    description: "Développez des stratégies marketing efficaces, SEO, SEA, réseaux sociaux et analytique web.",
-    price: 79.99,
-    originalPrice: 179.99,
-    image: "/api/placeholder/400/300",
-    duration: "35 heures",
-    students: 10230,
-    rating: 4.6,
-    level: "Intermédiaire",
-    category: "Marketing",
-    lessons: 127
-  },
-  {
-    id: "5",
-    title: "Blockchain et Développement Crypto",
-    instructor: "Alexandre Roux",
-    description: "Comprenez la blockchain, créez des smart contracts et développez des applications décentralisées.",
-    price: 149.99,
-    originalPrice: 349.99,
-    image: "/api/placeholder/400/300",
-    duration: "48 heures",
-    students: 6780,
-    rating: 4.8,
-    level: "Avancé",
-    category: "Blockchain",
-    lessons: 189
-  },
-  {
-    id: "6",
-    title: "Photographie Professionnelle",
-    instructor: "Claire Martin",
-    description: "Maîtrisez votre appareil photo, la composition, l'éclairage et le post-traitement professionnel.",
-    price: 59.99,
-    originalPrice: 129.99,
-    image: "/api/placeholder/400/300",
-    duration: "24 heures",
-    students: 14560,
-    rating: 4.7,
-    level: "Débutant",
-    category: "Photographie",
-    lessons: 87
-  },
-  {
-    id: "7",
-    title: "Business et Entrepreneuriat",
-    instructor: "Thomas Petit",
-    description: "Lancez votre entreprise, développez votre business model et gérez votre croissance.",
-    price: 99.99,
-    originalPrice: 229.99,
-    image: "/api/placeholder/400/300",
-    duration: "38 heures",
-    students: 18920,
-    rating: 4.8,
-    level: "Intermédiaire",
-    category: "Business",
-    lessons: 143
-  },
-  {
-    id: "8",
-    title: "Cybersécurité et Ethical Hacking",
-    instructor: "Dr. Robert Blanc",
-    description: "Protégez les systèmes, apprenez les techniques de hacking éthique et la sécurité informatique.",
-    price: 139.99,
-    originalPrice: 319.99,
-    image: "/api/placeholder/400/300",
-    duration: "52 heures",
-    students: 7890,
-    rating: 4.9,
-    level: "Avancé",
-    category: "Cybersécurité",
-    lessons: 201
-  }
+const levels = [
+  { value: "all", label: "Tous les niveaux" },
+  { value: "BEGINNER", label: "Débutant" },
+  { value: "INTERMEDIATE", label: "Intermédiaire" },
+  { value: "ADVANCED", label: "Avancé" },
+  { value: "EXPERT", label: "Expert" },
 ]
-
-const categories = [
-  "Toutes les catégories",
-  "Développement",
-  "IA & Data Science",
-  "Design",
-  "Marketing",
-  "Blockchain",
-  "Photographie",
-  "Business",
-  "Cybersécurité"
-]
-
-const levels = ["Tous les niveaux", "Débutant", "Intermédiaire", "Avancé"]
 
 export default function CoursesPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("Toutes les catégories")
-  const [selectedLevel, setSelectedLevel] = useState("Tous les niveaux")
-  const [sortBy, setSortBy] = useState("popularity")
+  const [courses, setCourses] = useState<DbCourse[]>([])
+  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedLevel, setSelectedLevel] = useState("all")
+  const [sortBy, setSortBy] = useState("popular")
 
-  const filteredCourses = coursesData.filter(course => {
-    const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         course.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "Toutes les catégories" || course.category === selectedCategory
-    const matchesLevel = selectedLevel === "Tous les niveaux" || course.level === selectedLevel
-    
-    return matchesSearch && matchesCategory && matchesLevel
-  })
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/courses?limit=100').then(r => r.json()),
+      fetch('/api/categories').then(r => r.json()),
+    ]).then(([coursesData, catsData]) => {
+      setCourses(coursesData.courses || [])
+      setCategories(catsData || [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
 
-  const sortedCourses = [...filteredCourses].sort((a, b) => {
-    switch (sortBy) {
-      case "price-low":
-        return a.price - b.price
-      case "price-high":
-        return b.price - a.price
-      case "rating":
-        return b.rating - a.rating
-      case "students":
-        return b.students - a.students
-      default:
-        return 0
+  const filtered = useMemo(() => {
+    let list = [...courses]
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter(c =>
+        c.title.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q) ||
+        (c.instructor.firstName || '').toLowerCase().includes(q)
+      )
     }
-  })
+    if (selectedCategory !== "all") {
+      list = list.filter(c => c.category.id === selectedCategory)
+    }
+    if (selectedLevel !== "all") {
+      list = list.filter(c => c.level === selectedLevel)
+    }
+    switch (sortBy) {
+      case "price-low": return list.sort((a, b) => a.price - b.price)
+      case "price-high": return list.sort((a, b) => b.price - a.price)
+      case "rating": return list.sort((a, b) => b.rating - a.rating)
+      case "popular": return list.sort((a, b) => b.studentsCount - a.studentsCount)
+      default: return list
+    }
+  }, [courses, search, selectedCategory, selectedLevel, sortBy])
 
-  const stats = {
-    totalCourses: coursesData.length,
-    totalStudents: coursesData.reduce((acc, course) => acc + course.students, 0),
-    avgRating: (coursesData.reduce((acc, course) => acc + course.rating, 0) / coursesData.length).toFixed(1)
-  }
+  const totalStudents = courses.reduce((s, c) => s + c.studentsCount, 0)
+  const avgRating = courses.length
+    ? (courses.reduce((s, c) => s + c.rating, 0) / courses.length).toFixed(1)
+    : "0.0"
 
   return (
-    <div className="relative z-10">
-      <section className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-blue-900 dark:to-purple-900 py-20">
+    <main className="min-h-screen bg-gray-50">
+      <ParticlesBackground />
+
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-12"
-          >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Cours en Ligne Premium
-              </span>
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="text-center mb-12">
+            <Badge className="mb-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+              Apprentissage en Ligne
+            </Badge>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Cours Premium
             </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Apprenez des experts et maîtrisez de nouvelles compétences avec nos cours interactifs
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Apprenez des experts, suivez votre progression, obtenez des certificats.
             </p>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12"
-          >
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalCourses}+</div>
-              <div className="text-gray-600 dark:text-gray-400">Cours Disponibles</div>
-            </div>
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">{(stats.totalStudents / 1000).toFixed(0)}k+</div>
-              <div className="text-gray-600 dark:text-gray-400">Étudiants Satisfaits</div>
-            </div>
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-6 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-                <span className="text-3xl font-bold text-pink-600">{stats.avgRating}</span>
-              </div>
-              <div className="text-gray-600 dark:text-gray-400">Note Moyenne</div>
-            </div>
-          </motion.div>
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            {[
+              { icon: GraduationCap, value: `${courses.length}+`, label: "Cours disponibles", color: "text-purple-600" },
+              { icon: Users, value: `${(totalStudents / 1000).toFixed(0)}k+`, label: "Étudiants", color: "text-pink-600" },
+              { icon: Star, value: avgRating, label: "Note moyenne", color: "text-yellow-500" },
+            ].map(({ icon: Icon, value, label, color }, i) => (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.1 }}
+                className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center shadow-sm"
+              >
+                <Icon className={`w-7 h-7 ${color} mx-auto mb-2`} />
+                <div className={`text-3xl font-bold ${color} mb-1`}>{value}</div>
+                <div className="text-sm text-gray-500">{label}</div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="py-12">
+      {/* Filters + Grid */}
+      <section className="py-10 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8"
-          >
+          {/* Filter bar */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Rechercher un cours..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input placeholder="Rechercher un cours..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
               </div>
-              
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Catégorie" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Catégorie" /></SelectTrigger>
                 <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">Toutes les catégories</SelectItem>
+                  {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-
               <Select value={selectedLevel} onValueChange={setSelectedLevel}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Niveau" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Niveau" /></SelectTrigger>
                 <SelectContent>
-                  {levels.map(level => (
-                    <SelectItem key={level} value={level}>
-                      {level}
-                    </SelectItem>
-                  ))}
+                  {levels.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Trier par" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Trier par" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="popularity">Plus populaire</SelectItem>
-                  <SelectItem value="rating">Mieux notés</SelectItem>
-                  <SelectItem value="students">Plus d'étudiants</SelectItem>
+                  <SelectItem value="popular">Plus populaire</SelectItem>
+                  <SelectItem value="rating">Mieux noté</SelectItem>
                   <SelectItem value="price-low">Prix croissant</SelectItem>
                   <SelectItem value="price-high">Prix décroissant</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          </motion.div>
+          </div>
 
-          <CourseGrid 
-            courses={sortedCourses}
-            title={`${sortedCourses.length} Cours Trouvés`}
-            subtitle="Découvrez notre sélection de cours de qualité"
-          />
+          {/* Result count */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">{filtered.length}</span> cours trouvé{filtered.length !== 1 ? 's' : ''}
+            </p>
+            {(search || selectedCategory !== "all" || selectedLevel !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearch(""); setSelectedCategory("all"); setSelectedLevel("all") }}
+                className="text-gray-500"
+              >
+                Effacer les filtres
+              </Button>
+            )}
+          </div>
+
+          {/* Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16">
+              <GraduationCap className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">Aucun cours trouvé</p>
+              <Button variant="outline" className="mt-4" onClick={() => { setSearch(""); setSelectedCategory("all"); setSelectedLevel("all") }}>
+                Voir tous les cours
+              </Button>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {filtered.map((course, i) => (
+                <motion.div
+                  key={course.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: Math.min(i * 0.05, 0.4) }}
+                >
+                  <DbCourseCard course={course} />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
         </div>
       </section>
-    </div>
+    </main>
   )
 }
